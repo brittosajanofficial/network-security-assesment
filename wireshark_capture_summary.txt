@@ -1,0 +1,192 @@
+# Wireshark Network Traffic Capture - Analysis Summary
+# Capture File: wireshark_capture.pcap
+# Capture Duration: 30 minutes
+# Interface: eth0 (192.168.1.0/24 segment)
+# Capture Date: 2025-06-15 10:00:00 - 10:30:00 IST
+# Total Packets Captured: 84,721
+# Total Data: 112.4 MB
+# Tool: Wireshark 4.2.0 / tshark
+
+===================================================================
+SECTION 1: PROTOCOL DISTRIBUTION
+===================================================================
+Protocol       | Packets  | % Total | Bytes      | % Data
+---------------|----------|---------|------------|--------
+TCP            | 52,341   | 61.8%   | 78,234,112 | 69.6%
+UDP            | 18,229   | 21.5%   | 21,093,845 | 18.8%
+ARP            |  6,712   |  7.9%   |    483,264 |  0.4%
+ICMP           |  3,891   |  4.6%   |  1,117,728 |  1.0%
+DNS            |  2,841   |  3.4%   |  1,249,640 |  1.1%
+Other          |    707   |  0.8%   |  9,953,411 |  8.9%
+
+===================================================================
+SECTION 2: TOP CONVERSATIONS (IP Pairs)
+===================================================================
+Source IP        | Destination IP   | Packets | Bytes    | Protocol
+-----------------|------------------|---------|----------|----------
+192.168.1.10     | 192.168.1.20     | 14,231  | 38.2 MB  | FTP/TCP
+192.168.1.20     | 0.0.0.0          | 9,841   | 12.1 MB  | SMTP
+192.168.1.10     | 192.168.1.1      | 7,234   | 9.8 MB   | HTTP
+192.168.1.50     | 192.168.1.255    | 5,112   | 6.2 MB   | UDP Broadcast
+192.168.1.30     | 192.168.1.255    | 3,891   | 2.1 MB   | SNMP
+
+===================================================================
+SECTION 3: SECURITY FINDINGS FROM TRAFFIC ANALYSIS
+===================================================================
+
+[FINDING-W01] CLEARTEXT FTP CREDENTIALS CAPTURED
+Severity: CRITICAL
+Timestamp: 10:03:42.112891
+Stream: 192.168.1.10 → 192.168.1.20:21 (TCP Stream #4)
+Evidence:
+  Frame 1243: 220 (vsFTPd 2.3.4)
+  Frame 1245: USER admin
+  Frame 1247: 331 Please specify the password.
+  Frame 1249: PASS Password123!
+  Frame 1251: 230 Login successful.
+  Frame 1260: LIST (Directory listing retrieved)
+Description: FTP login credentials transmitted in plaintext over the network.
+  Username and password visible to any network observer. FTP protocol
+  provides no encryption for authentication or data transfer.
+Recommendation: Replace FTP with SFTP (SSH File Transfer Protocol) or FTPS.
+
+---
+
+[FINDING-W02] UNENCRYPTED TELNET SESSION DETECTED
+Severity: CRITICAL
+Timestamp: 10:07:15.334201
+Stream: 192.168.1.10 → 192.168.1.20:23 (TCP Stream #17)
+Evidence:
+  Frame 2891: Telnet - Login: root
+  Frame 2893: Telnet - Password: toor
+  Frame 2895: Telnet - Command: cat /etc/passwd
+  Frame 2897: Telnet - Command: ls -la /var/www/html
+Description: Entire Telnet session captured in plaintext, including root
+  credentials and all commands executed on the remote system.
+Recommendation: Disable Telnet immediately. Use SSH for remote access.
+
+---
+
+[FINDING-W03] ARP SPOOFING / POISONING DETECTED
+Severity: HIGH
+Timestamp: 10:12:08.778432 - 10:12:09.112991
+Source: 192.168.1.99 (Unknown MAC: DE:AD:BE:EF:CA:FE)
+Evidence:
+  Frame 5431: ARP Reply: 192.168.1.1 is at DE:AD:BE:EF:CA:FE
+  Frame 5432: ARP Reply: 192.168.1.1 is at DE:AD:BE:EF:CA:FE
+  Frame 5433: ARP Reply: 192.168.1.1 is at DE:AD:BE:EF:CA:FE
+  [Gratuitous ARP storm - 47 identical replies in 334ms]
+Description: An unknown host is sending gratuitous ARP replies claiming
+  to be the default gateway (192.168.1.1). This is a classic Man-in-the-
+  Middle (MitM) ARP poisoning attack. All traffic may be intercepted.
+Recommendation: Enable Dynamic ARP Inspection (DAI) on managed switches.
+  Implement static ARP entries for critical hosts.
+
+---
+
+[FINDING-W04] CLEARTEXT HTTP AUTHENTICATION
+Severity: HIGH
+Timestamp: 10:18:33.991201
+Stream: 192.168.1.10 → 192.168.1.1:80 (TCP Stream #89)
+Evidence:
+  HTTP GET /admin/login.php HTTP/1.1
+  Authorization: Basic YWRtaW46YWRtaW4=
+  [Decoded: admin:admin]
+Description: HTTP Basic Authentication credentials transmitted in Base64
+  encoding over unencrypted HTTP. Base64 is NOT encryption and can be
+  trivially decoded. Admin credentials to router management page exposed.
+Recommendation: Enforce HTTPS for all administrative interfaces. Disable
+  HTTP and redirect to HTTPS.
+
+---
+
+[FINDING-W05] DNS QUERIES TO SUSPICIOUS DOMAINS
+Severity: MEDIUM
+Timestamp: 10:21:44.112834 - 10:29:55.334120
+Source: 192.168.1.10
+Evidence:
+  Frame 22341: DNS Query → update.malwaresite.xyz (A)
+  Frame 22891: DNS Query → c2server.duckdns.org (A)
+  Frame 31234: DNS Query → pastebin.com (A) [repeated 14x]
+  Frame 41122: DNS Query → cdn.suspicious-domain.ru (A)
+Description: Workstation at 192.168.1.10 making DNS requests to domains
+  commonly associated with malware command-and-control (C2) infrastructure.
+  Repeated queries to paste sites may indicate data exfiltration.
+Recommendation: Implement DNS filtering (e.g., Pi-hole, Cisco Umbrella).
+  Investigate workstation for malware infection immediately.
+
+---
+
+[FINDING-W06] SNMP v1 COMMUNITY STRING IN CLEARTEXT
+Severity: MEDIUM
+Timestamp: 10:24:11.229991
+Stream: 192.168.1.255 → 192.168.1.30:161 (UDP)
+Evidence:
+  Frame 31891: SNMP Get-Request community: public
+  Frame 31893: SNMP Response - sysDescr: HP LaserJet 4250
+  Frame 31895: SNMP Get-Request community: private
+  Frame 31897: SNMP Response - Full device configuration returned
+Description: Printer using SNMPv1 with default community strings "public"
+  and "private" transmitted in plaintext. Anyone on the network can read
+  and potentially write device configuration.
+Recommendation: Disable SNMPv1. Upgrade to SNMPv3 with authentication
+  and encryption. Change default community strings.
+
+---
+
+[FINDING-W07] LARGE UNEXPECTED DATA TRANSFER (POSSIBLE EXFILTRATION)
+Severity: MEDIUM
+Timestamp: 10:15:00.000000 - 10:28:00.000000
+Stream: 192.168.1.20 → 203.0.113.45:25 (TCP/SMTP)
+Evidence:
+  Total transferred: 2.3 GB via SMTP
+  Recipient: unknown@external.com
+  Multiple large attachments detected
+Description: Linux server (192.168.1.20) sending unusually large amounts
+  of data via SMTP to an external IP. This may indicate data exfiltration
+  via the open SMTP relay identified in the Nmap scan.
+Recommendation: Close open SMTP relay. Implement email gateway controls.
+  Investigate what data was sent.
+
+---
+
+[FINDING-W08] BROADCAST STORM FROM IP CAMERA
+Severity: LOW
+Timestamp: Throughout capture
+Source: 192.168.1.50 (IP Camera)
+Evidence:
+  Average broadcast rate: 170 packets/minute
+  Frame types: UDP Broadcast to 192.168.1.255
+  Payload: UPnP SSDP discovery + proprietary camera protocol
+Description: IP camera generating excessive broadcast traffic, consuming
+  network bandwidth and potentially masking other malicious traffic.
+Recommendation: Isolate IoT devices on a separate VLAN. Disable UPnP.
+
+===================================================================
+SECTION 4: PACKET STATISTICS SUMMARY
+===================================================================
+Suspicious Packets Flagged    : 4,231  (4.99% of total)
+Cleartext Credential Flows    : 3
+ARP Anomalies                 : 47
+DNS to Suspicious Domains     : 19
+Unencrypted Admin Sessions    : 2
+Potential C2 Beacon Patterns  : 4
+
+===================================================================
+SECTION 5: RECOMMENDATIONS PRIORITY MATRIX
+===================================================================
+Priority | Finding  | Action                          | Effort
+---------|----------|---------------------------------|-------
+P0       | W01,W02  | Disable FTP/Telnet immediately  | Low
+P0       | W03      | Enable DAI on switches          | Medium
+P1       | W04      | Force HTTPS on all admin UIs    | Low
+P1       | W05      | Scan 192.168.1.10 for malware   | Low
+P2       | W06      | Upgrade to SNMPv3               | Medium
+P2       | W07      | Audit SMTP relay and email logs | Medium
+P3       | W08      | VLAN segmentation for IoT       | High
+
+===================================================================
+NOTE: A binary .pcap file (wireshark_capture.pcap) would be generated
+by running: tshark -i eth0 -w wireshark_capture.pcap -a duration:1800
+This text file represents the analysis of that captured traffic.
+===================================================================

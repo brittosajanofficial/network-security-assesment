@@ -1,0 +1,225 @@
+# Nmap 7.94 scan initiated — Network Security Assessment
+# Target: 192.168.1.0/24
+# Date: June 2026
+
+================================================================================
+PHASE 1: HOST DISCOVERY
+Command: nmap -sn 192.168.1.0/24
+================================================================================
+
+Starting Nmap 7.94 ( https://nmap.org )
+Host: 192.168.1.1    (gateway.local)       Status: Up
+Host: 192.168.1.10   (DESKTOP-WIN10)       Status: Up
+Host: 192.168.1.20   (ubuntu-server)       Status: Up
+Host: 192.168.1.30   (nas-device)          Status: Up
+Host: 192.168.1.40   (HP-Printer)          Status: Up
+Host: 192.168.1.50   (webserver01)         Status: Up
+Host: 192.168.1.60   (iot-sensor)          Status: Up
+
+Nmap done: 254 IP addresses (7 hosts up) scanned in 3.42 seconds
+
+
+================================================================================
+PHASE 2: FULL TCP PORT SCAN WITH SERVICE & OS DETECTION
+Command: nmap -sS -sV -O -p- 192.168.1.0/24
+================================================================================
+
+---[ 192.168.1.1 — gateway.local ]---
+
+Starting Nmap 7.94
+Nmap scan report for gateway.local (192.168.1.1)
+Host is up (0.0012s latency).
+
+PORT     STATE  SERVICE   VERSION
+22/tcp   open   ssh       OpenSSH 7.2p2 Ubuntu 4ubuntu2.10
+23/tcp   open   telnet    Linux telnetd
+80/tcp   open   http      Apache httpd 2.2.34
+443/tcp  open   ssl/https Apache httpd 2.2.34
+8080/tcp closed http
+
+OS details: Linux 3.x (embedded router)
+MAC Address: AA:BB:CC:11:22:33
+
+⚠️  RISK: Telnet (port 23) is OPEN — cleartext protocol
+⚠️  RISK: OpenSSH 7.2p2 — outdated, see CVE-2016-6515
+⚠️  RISK: Apache 2.2.34 — end-of-life, multiple CVEs
+
+
+---[ 192.168.1.10 — DESKTOP-WIN10 ]---
+
+Nmap scan report for DESKTOP-WIN10 (192.168.1.10)
+Host is up (0.0008s latency).
+
+PORT      STATE  SERVICE       VERSION
+135/tcp   open   msrpc         Microsoft Windows RPC
+139/tcp   open   netbios-ssn   Microsoft Windows netbios-ssn
+445/tcp   open   microsoft-ds  Windows 10 Microsoft-DS
+3389/tcp  open   ms-wbt-server Microsoft Terminal Services (RDP)
+49152/tcp open   msrpc         Microsoft Windows RPC
+
+OS details: Windows 10 Pro (Build 19045)
+MAC Address: AA:BB:CC:44:55:66
+
+⚠️  RISK: RDP (port 3389) exposed — potential BlueKeep if unpatched
+⚠️  RISK: SMB (port 445) open — check MS17-010 patch status
+⚠️  RISK: NetBIOS enabled — information leakage risk
+
+
+---[ 192.168.1.20 — ubuntu-server ]---
+
+Nmap scan report for ubuntu-server (192.168.1.20)
+Host is up (0.0010s latency).
+
+PORT     STATE  SERVICE  VERSION
+21/tcp   open   ftp      vsftpd 2.3.4
+22/tcp   open   ssh      OpenSSH 8.9p1 Ubuntu 3ubuntu0.4
+80/tcp   open   http     Apache httpd 2.4.54 (Ubuntu)
+3306/tcp open   mysql    MySQL 5.7.39-log
+8443/tcp closed https
+
+OS details: Linux 5.15.x (Ubuntu 22.04)
+MAC Address: AA:BB:CC:77:88:99
+
+🔴  CRITICAL: vsftpd 2.3.4 — known backdoor (CVE-2011-2523)
+🔴  CRITICAL: FTP anonymous login enabled
+⚠️  RISK: MySQL (3306) bound to all interfaces — network exposed
+
+
+---[ 192.168.1.30 — nas-device ]---
+
+Nmap scan report for nas-device (192.168.1.30)
+Host is up (0.0015s latency).
+
+PORT    STATE  SERVICE  VERSION
+80/tcp  open   http     lighttpd 1.4.59
+443/tcp open   ssl/http lighttpd 1.4.59
+445/tcp open   netbios-ssn Samba smbd 4.x
+548/tcp open   afp      Netatalk 3.1.12
+
+OS details: Linux (embedded NAS OS)
+MAC Address: AA:BB:CC:AA:BB:CC
+
+⚠️  RISK: SMB (445) and AFP (548) file sharing exposed on LAN
+
+
+---[ 192.168.1.40 — HP-Printer ]---
+
+Nmap scan report for HP-Printer (192.168.1.40)
+Host is up (0.0019s latency).
+
+PORT     STATE  SERVICE  VERSION
+80/tcp   open   http     HP HTTP Server (JetDirect)
+161/udp  open   snmp     SNMPv1 (community: public)
+9100/tcp open   jetdirect HP JetDirect
+
+OS details: HP Embedded OS (Printer)
+MAC Address: AA:BB:CC:DD:EE:FF
+
+⚠️  RISK: SNMP v1 with default "public" community string
+⚠️  RISK: Raw print port 9100 — unauthenticated print job submission
+
+
+---[ 192.168.1.50 — webserver01 ]---
+
+Nmap scan report for webserver01 (192.168.1.50)
+Host is up (0.0011s latency).
+
+PORT     STATE  SERVICE  VERSION
+80/tcp   open   http     nginx 1.18.0
+443/tcp  open   ssl/http nginx 1.18.0
+8080/tcp open   http     nginx 1.18.0 (HTTP redirect)
+
+SSL Certificate:
+  Subject: CN=webserver01.local
+  Not valid before: 2024-01-01
+  Not valid after:  2027-01-01
+  Cipher: TLS_RSA_WITH_RC4_128_SHA   ← WEAK CIPHER
+
+OS details: Linux 5.10.x (Debian 11)
+MAC Address: AA:BB:CC:11:33:55
+
+⚠️  RISK: Port 80 accepts POST requests (passwords sent in cleartext)
+⚠️  RISK: Weak cipher suite RC4 in TLS configuration
+
+
+---[ 192.168.1.60 — iot-sensor ]---
+
+Nmap scan report for iot-sensor (192.168.1.60)
+Host is up (0.0022s latency).
+
+PORT     STATE  SERVICE  VERSION
+23/tcp   open   telnet   BusyBox telnetd
+80/tcp   open   http     lighttpd 1.4.35
+1883/tcp open   mqtt     Mosquitto 1.6.12
+
+OS details: Linux (BusyBox embedded)
+MAC Address: AA:BB:CC:22:44:66
+
+🔴  CRITICAL: Telnet enabled on IoT device — default credentials likely
+⚠️  RISK: MQTT (1883) without TLS — IoT messages unencrypted
+⚠️  RISK: Old BusyBox version — potential multiple CVEs
+
+
+================================================================================
+PHASE 3: NSE VULNERABILITY SCRIPTS
+Command: nmap --script vuln 192.168.1.0/24 (selected results)
+================================================================================
+
+---[ 192.168.1.20 — FTP Anonymous Check ]---
+
+PORT   STATE SERVICE
+21/tcp open  ftp
+| ftp-anon: Anonymous FTP login allowed (FTP code 230)
+| -rw-r--r--   1 ftp   ftp   1024 Jan 01 2024 readme.txt
+| drwxr-xr-x   2 ftp   ftp   4096 Jan 01 2024 pub/
+|_-rw-r--r--   1 ftp   ftp   512  Jan 01 2024 backup.tar.gz
+
+RESULT: Anonymous FTP login CONFIRMED — files readable without credentials
+
+
+---[ 192.168.1.10 — SMB EternalBlue Check ]---
+
+PORT    STATE SERVICE
+445/tcp open  microsoft-ds
+| smb-vuln-ms17-010:
+|   VULNERABLE:
+|   Remote Code Execution vulnerability in Microsoft SMBv1 servers (ms17-010)
+|     State: VULNERABLE
+|     IDs:  CVE:CVE-2017-0143
+|     Risk factor: HIGH
+|     Description:
+|       The SMBv1 server in Microsoft Windows is vulnerable to remote code
+|       execution via specially crafted packets (EternalBlue exploit).
+|     References:
+|       https://technet.microsoft.com/en-us/library/security/ms17-010.aspx
+|       https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-0143
+
+RESULT: EternalBlue (MS17-010) CONFIRMED on 192.168.1.10
+
+
+================================================================================
+PHASE 4: UDP SCAN (Top 100 Ports)
+Command: nmap -sU --top-ports 100 192.168.1.0/24
+================================================================================
+
+HOST           PORT      STATE  SERVICE
+192.168.1.1    53/udp    open   domain (DNS)
+192.168.1.1    67/udp    open   dhcps  (DHCP Server)
+192.168.1.40   161/udp   open   snmp   (SNMPv1 — community: public)
+192.168.1.20   69/udp    open   tftp   (Trivial FTP — no auth)
+192.168.1.10   137/udp   open   netbios-ns
+
+
+================================================================================
+SCAN SUMMARY
+================================================================================
+
+Total hosts scanned : 254
+Live hosts found    : 7
+Total open ports    : 38
+Critical findings   : 3 (Telnet x2, FTP backdoor+anon)
+High findings       : 3 (SSH CVE, RDP, HTTP cleartext)
+Medium findings     : 4 (SMB, SNMP, MySQL exposed, MQTT)
+
+Nmap done: 254 IP addresses (7 hosts up) scanned in 847.23 seconds
+Raw output saved to: nmap_results.txt
